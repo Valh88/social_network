@@ -1,7 +1,7 @@
 from rest_framework import status, viewsets, generics
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
-from .serializers import UserSerializer, UserFollowingSerializer, RegistrationSerializer
+from .serializers import UserSerializer, UserFollowingSerializer, RegistrationSerializer, ProfileForFullSerializer
 from rest_framework.response import Response
 from accounts_app.models import Profile, UserFollowing
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -33,6 +33,11 @@ class FollowingUser(APIView):
 class Following(APIView):
 
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user_to_follow = Profile.objects.get(pk=pk)
+        ser =  ProfileForFullSerializer(user_to_follow, read_only=True, context= {'request': request})
+        return Response(ser.data, status=status.HTTP_200_OK)
 
     def post(self, request, pk):
         user_to_follow = Profile.objects.get(pk=pk)
