@@ -17,3 +17,12 @@ class CommentCrud(permissions.BasePermission):
             return True
         else:
             return obj.commentator.id == request.user.id
+
+
+class CreateRate(permissions.BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        else:
+            return obj.profile.id == request.user.id

@@ -1,10 +1,10 @@
 from rest_framework.views import APIView
-from .serializers import PostSerializer, CreatePostSerializer, DetailPostSerializer, CommentSerializer
-from network_app.models import Post, Comment
+from .serializers import PostSerializer, CreatePostSerializer, DetailPostSerializer, CommentSerializer, RatingSerializer, LikeCommentSerializer
+from network_app.models import Post, Comment, Rating
 from rest_framework.response import Response
 from rest_framework import status, viewsets, generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-from .permissions import HasRedUserOrReadOnly, CommentCrud
+from .permissions import HasRedUserOrReadOnly, CommentCrud, CreateRate
 
 class PostListView(APIView):
 
@@ -33,14 +33,7 @@ class CreatePost(generics.CreateAPIView):
         post = Post.objects.create(img=data, publisher=request.user.profile)
         return Response(status=status.HTTP_200_OK)   
     
-    # def perfom_create(self, serializer):
-        # user_create = self.request.user.profile
-        # data = serializer.validated_data['image']
-        # print(data)
-        # post = Post.objects.create(img=data, publisher=user_create)
-
-     
-       
+          
 class DetailPostView(APIView):
 
     permission_classes = [IsAuthenticated, HasRedUserOrReadOnly]
@@ -51,15 +44,11 @@ class DetailPostView(APIView):
         except Post.DoesNotExist:
             return Response({'error': 'not found'}, status=status.HTTP_404_NOT_FOUND)
         ser = DetailPostSerializer(post,  context= {'request': request})
-        return Response(ser.data)
+        data = ser.data
+        # data['rate'] = post.average_rating
+        return Response(data=data)
     
-    # def put(self, request, pk):
-        # post = Post.objects.get(pk=pk)
-        # ser = DetailPostSerializer(post, data=request.data,  context= {'request': request})
-        # if ser.is_valid():
-            # return Response(ser.data)
-        # return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-
+ 
     def delete(self, request, pk):
         post = Post.objects.get(pk=pk)
         post.delete()
@@ -73,7 +62,7 @@ class CommentPostList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        pk = self.kwargs['pk']
+        pk = self.kwargs['pk']    
         return Comment.objects.filter(post=pk)
 
 
@@ -98,3 +87,35 @@ class CommentCreate(generics.CreateAPIView):
         user = self.request.user.profile
         post = Post.objects.get(id=pk)
         serializer.save(commentator=user, post=post)
+
+
+class RatingCreate(generics.CreateAPIView):
+    serializer_class = RatingSerializer
+    permission_classes = [CreateRate, IsAuthenticated]
+
+    def perform_create(self, serializer):
+        profile = self.request.user.profile
+        serializer.save(profile=profile)
+   
+
+class LikeComment(generics.CreateAPIView):
+    serializer_class = LikeCommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        profile = self.request.user.profile
+        serializer.save(profile=profile)
+     
+
+class TopImageRating(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        return Post.objects.order_by('-rates__rate')[:10]
+        # return = sorted(Post.objects.all()[:10],  key=lambda m: m.average_rating, reverse=True)
+
+    
+
+    
+
